@@ -23,13 +23,13 @@ Base.metadata.create_all(bind=engine)
 
 @app.get("/notices", response_model=list[NoteResponse])
 def get_all_posts(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    WHERE = Note.user_id == current_user.id
+    WHERE = Note.user_id == current_user.id 
     return db.query(Note).filter(WHERE).all() 
 
 @app.get("/notices/{id}", response_model=NoteResponse)
 def get_post(id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db) ):
-    notice = db.get(Note, id)
-    WHERE = Note.user_id == id and Note.user_id == current_user.id
+    WHERE = Note.id == id and Note.user_id == current_user.id 
+    notice = db.query(Note).filter(WHERE).first()
     if not notice:
         raise HTTPException(status_code=404, detail="Notice not found")
     return notice
@@ -37,7 +37,7 @@ def get_post(id: int, current_user: User = Depends(get_current_user), db: Sessio
 
 @app.post("/notices", response_model=NoteResponse)                 
 def create_notice(notice: NoteCreate, current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
-    new_note = Note(**notice.model_dump())
+    new_note = Note(**notice.model_dump(), user_id=current_user.id)
     new_note.user_id = current_user.id
     db.add(new_note)
     db.commit()
@@ -49,8 +49,9 @@ def update_post(id: int):
     pass
 
 @app.delete("/posts/{id}")
-def delete_post(id: int, db: Session = Depends(get_db)):
-    notice = db.get(Note, id)
+def delete_post(id: int, current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    WHERE = Note.id == id and Note.user_id == current_user.id
+    notice = db.query(Note).filter(WHERE).first()
     if not notice:
         raise HTTPException(status_code=404, detail="Notice not found")
     db.delete(notice)
