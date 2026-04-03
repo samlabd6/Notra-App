@@ -38,19 +38,21 @@ def verify_access_token(token: str):
         username: str = payload.get("sub")
         if username is None:
             return None
-        return username
+        return payload
     except jwt.PyJWTError:
         return None
 
 def get_current_user(token: str = Depends(oauth_scheme), db: Session = Depends(get_db)):  
     token_data = verify_access_token(token)
-    user = db.query(User).filter(User.username == token_data.username).first()
+    if token_data is None:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    username = token_data.get("sub")
+    user = db.query(User).filter(User.username == username).first()
     if user is None:
         raise HTTPException(status_code=401, detail="User not found")
     return user
 
-def get_current_active_user(token: str = Depends(get_current_user)):
-    username = verify_access_token(token)
-    if username is None:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    return username
+def get_current_active_user(current_user: User = Depends(get_current_user)):
+    if not current_user.is_active:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user
