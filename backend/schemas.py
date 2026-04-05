@@ -5,7 +5,7 @@ from typing import Optional
 class NoteCreate(BaseModel):
     title: str
     context: str
-    user_id: int
+    #user_id: int
 
 
 class NoteResponse(BaseModel):

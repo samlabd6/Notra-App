@@ -1,5 +1,5 @@
 # jwt and oauth2 imports for authentication and token management
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordBearer
 from fastapi import HTTPException, Depends
 from typing import Optional
 import jwt 
