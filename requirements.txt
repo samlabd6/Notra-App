@@ -8,3 +8,4 @@ hashlib
 python-dotenv   
 PyJWT 
 python-multipart
+pydantic[email]
