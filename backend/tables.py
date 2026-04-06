@@ -15,6 +15,9 @@ class User(Base):
     salt = Column(String, nullable=False)
     password_hash = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
+    is_verfied = Column(Boolean, default=False)
+    verification_token = Column(String, nullable=True)
+    code_expiry = Column(DateTime, nullable=True)
     created_at = Column(DateTime, server_default=func.current_timestamp())
 
     notes = relationship(

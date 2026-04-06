@@ -9,3 +9,4 @@ python-dotenv
 PyJWT 
 python-multipart
 pydantic[email]
+fastapi-mail
