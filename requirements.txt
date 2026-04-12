@@ -1,12 +1,10 @@
 fastapi
 uvicorn
 sqlalchemy
-sqlalchemy.orm
 pydantic
-pwdlib[argon2]
-hashlib
-python-dotenv   
-PyJWT 
+python-dotenv
+PyJWT
 python-multipart
-pydantic[email]
 fastapi-mail
+Jinja2
+email-validator

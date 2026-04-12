@@ -1,5 +1,5 @@
 # FastAPI backend for Personal Knowledge Notes API
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -12,8 +12,8 @@ from database import get_db, engine
 from tables import Base, Note, User
 from schemas import NoteCreate, NoteResponse, UserCreate, UserLogin, UserResponse, Token 
 from encryp import hash_password, verify_password
-from oauth import create_access_token, verify_access_token, get_current_user, get_current_active_user
-
+from oauth import create_access_token, get_current_user, get_current_active_user
+from email_verification import send_verification_email, generate_verification_code
 
 
 
@@ -60,17 +60,31 @@ def delete_post(id: int, current_user: User = Depends(get_current_active_user), 
 
 
 @app.post("/register", response_model=UserResponse)
-def create_user(user: UserCreate, db: Session = Depends(get_db)):
+async def create_user(user: UserCreate, db: Session = Depends(get_db)):
     if db.query(User).filter(User.username == user.username).first():
         raise HTTPException(status_code=400, detail="Username already exists")
     
+    code = generate_verification_code()
+
     hashed_pw = hash_password(user.password)
-    new_user = User(username=user.username, email=user.email, password_hash=hashed_pw[1], salt=hashed_pw[0])
+    new_user = User(
+        username=user.username,
+        email=user.email,
+        password_hash=hashed_pw[1],
+        is_verfied=False,
+        salt=hashed_pw[0],
+        verification_code=code,
+        code_expiry=datetime.now() + timedelta(minutes=10)
+    )
+        
     try:
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
+        await send_verification_email(new_user.email, code)
+
         return new_user
+    
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=400, detail="Username or email already exists")
@@ -85,7 +99,7 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
 #    
 #    return db_user
 
-@app.post("/token", response_model=Token)
+@app.post("/Login", response_model=Token)
 def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == form_data.username).first()
     if not user or not verify_password(user.salt, user.password_hash, form_data.password):
@@ -93,6 +107,9 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
+    
+    if not user.is_verfied:
+        raise HTTPException(status_code=403, detail="Email not verified. Please verify your email before logging in.")
     
     access_token_expires = timedelta(minutes=30)
     access_token = create_access_token(
